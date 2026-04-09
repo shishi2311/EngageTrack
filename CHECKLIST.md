@@ -128,11 +128,12 @@
   - [ ] Button press scale feedback
   - [ ] Responsive: sidebar collapses <1024px, grid 1-col <768px
 
-- [ ] **Step 14 — Frontend Tests**
-  - [ ] `HealthRing` — correct color per score range
-  - [ ] `MilestoneCard` — shows only valid action buttons per state
-  - [ ] `ApprovalDialog` — requires approver name
-  - [ ] `StatusBadge` — correct styling per status
+- [x] **Step 14 — Frontend Tests — 34/34 passing**
+  - [x] `HealthRing.test.tsx` — correct color per score range, size variants, showLabel toggle
+  - [x] `MilestoneCard.test.tsx` — valid action buttons per state, disabled buttons, overdue, count badge
+  - [x] `ApprovalDialog.test.tsx` — requires approver name, approve/reject API calls, error toast
+  - [x] `StatusBadge.test.tsx` — correct label + color per status, dot-only variant, unknown fallback
+  - [x] Vitest + Testing Library configured; `make test-frontend` target added
 
 ---
 
