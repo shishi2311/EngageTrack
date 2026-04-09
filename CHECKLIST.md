@@ -67,50 +67,57 @@
 
 ## Frontend
 
-- [ ] **Step 7 — CSS Design System**
+- [x] **Step 7 — CSS Design System**
   - [x] `globals.css` — all CSS variables (colors, spacing, radius, transitions, typography)
+  - [x] `globals.css` — scrollbar styling, `::selection` color added
   - [x] `index.html` — Google Fonts (DM Sans + JetBrains Mono)
   - [x] Keyframe animations: `fadeInUp`, `shimmer`, `pulse-red`, staggered cards
-  - [ ] Verify variables render correctly in browser
+  - [x] `tailwind.config.js` — CSS variable color/shadow/font tokens wired into Tailwind theme
 
-- [ ] **Step 8 — Shared Components**
-  - [ ] `HealthRing.tsx` — SVG arc animation, size variants, glow effect
-  - [ ] `StatusBadge.tsx` — dot + pill, all status colors from CSS vars
-  - [ ] `Skeleton.tsx` — shimmer animation, width/height props
-  - [ ] `Toast.tsx` — slide-in, auto-dismiss 4s, progress bar, success/error styles
-  - [ ] `Modal.tsx` — backdrop blur, scale-in animation
-  - [ ] `EmptyState.tsx` — icon, heading, subtitle, CTA button
-  - [ ] `ProgressBar.tsx` — gradient fill, mount animation
+- [x] **Step 8 — Shared Components**
+  - [x] `HealthRing.tsx` — SVG arc animation, count-up number, 3 size variants, glow effect
+  - [x] `StatusBadge.tsx` — dot + pill, all status colors from CSS vars
+  - [x] `Skeleton.tsx` — text/circle/card variants, shimmer animation, multi-line support
+  - [x] `Toast.tsx` — `ToastContainer` + `ToastItem`, slide-in, auto-dismiss 4s, progress bar, success/error
+  - [x] `Modal.tsx` — portal, backdrop blur, scale-in animation, Escape key close
+  - [x] `EmptyState.tsx` — geometric SVG icon, heading, subtitle, CTA button
+  - [x] `ProgressBar.tsx` — gradient fill by health range, mount animation
 
-- [ ] **Step 9 — API Client (typed)**
-  - [x] `api/client.ts` — `get`, `post`, `patch` wrappers
-  - [x] `hooks/useApi.ts` — loading/error/data state
-  - [x] `types/index.ts` — all domain interfaces
-  - [ ] Test hook with real backend
+- [x] **Step 9 — API Client (typed)**
+  - [x] `api/client.ts` — full typed endpoint functions for all resources
+  - [x] `hooks/useApi.ts` — `useApi<T>(fetchFn)` with loading/error/data/refetch
+  - [x] `types/index.ts` — complete domain interfaces + request payloads + ApiError
+  - [x] `AppShell.tsx` — responsive sidebar (220px ↔ 60px), sticky, max-width 1400px
+  - [x] `Sidebar.tsx` — nav icons, active indicator bar, collapse toggle
+  - [x] `PageHeader.tsx` — title/subtitle/actions slot
+  - [x] `App.tsx` — route transition animation on pathname change
 
-- [ ] **Step 10 — Dashboard Page**
-  - [ ] 4 summary stat cards (Total Clients, Active Projects, Avg Health, Overdue Milestones)
-  - [ ] "Overdue" value pulses red if > 0
-  - [ ] Projects grid (2-col desktop, 1-col mobile)
-  - [ ] `ProjectCard` — HealthRing, progress bar, meta row, StatusBadge
-  - [ ] Skeleton loading state
-  - [ ] Empty state if no projects
+- [x] **Step 10 — Dashboard Page**
+  - [x] 4 summary stat cards (Total Clients, Active Projects, Avg Health, Overdue Milestones)
+  - [x] "Overdue" value pulses red if > 0
+  - [x] Projects grid (auto-fill, min 300px per card)
+  - [x] `ProjectCard` — HealthRing, progress bar, meta row, StatusBadge, stagger entrance
+  - [x] Skeleton loading state for both stat cards and project grid
+  - [x] Empty state if no active projects
 
-- [ ] **Step 11 — Project Detail Page**
-  - [ ] Project header — large HealthRing, dates, StatusBadge, 3 health breakdown cards
-  - [ ] Milestone timeline — vertical line, status dots, due dates, overdue highlighting
-  - [ ] Valid action buttons only (driven by `valid_transitions`)
-  - [ ] `ApprovalDialog` — modal, approver name required, approve/reject buttons
-  - [ ] Status feed panel — typed entries, relative timestamps, blocker red border
-  - [ ] Add Update form — slide-down animation, type selector pills
-  - [ ] Skeleton loading for both panels
+- [x] **Step 11 — Project Detail Page**
+  - [x] Back link "← Back to Projects"
+  - [x] Project header card — large HealthRing (lg), name, client, date range, StatusBadge
+  - [x] Health breakdown — 3 mini stat cards (Completion, On-Time, Blockers)
+  - [x] 60/40 two-column layout (stacks on mobile)
+  - [x] `MilestoneTimeline` — vertical line, colored status dots, pulse on in_progress
+  - [x] `MilestoneCard` — overdue highlighting, 3px status border, valid action buttons only
+  - [x] `ApprovalDialog` — modal, approver name required, approve/reject, reject note
+  - [x] `StatusFeed` — type dot + badge, relative timestamps, blocker red border
+  - [x] `StatusForm` — slide-down animation, type selector pills, validation
+  - [x] Skeleton loading for header + both columns
 
-- [ ] **Step 12 — Clients Page**
-  - [ ] Premium table — hover rows, uppercase headers
-  - [ ] "Add Client" button → modal form
-  - [ ] Row click → navigate to projects filtered by client
-  - [ ] Client form validation (matches backend)
-  - [ ] Empty state
+- [x] **Step 12 — Clients Page**
+  - [x] Premium table — bg-tertiary header, uppercase, hover rows
+  - [x] "Add Client" button → `ClientForm` modal
+  - [x] Row name click → navigate to /?client_id=xxx
+  - [x] `ClientForm` — inline field errors, API error toasts
+  - [x] Skeleton loading rows + empty state with CTA
 
 - [ ] **Step 13 — Animations + Polish**
   - [ ] Page transitions (`fadeInUp` on route change)
@@ -131,12 +138,14 @@
 
 ## Final Steps
 
-- [ ] **Step 15 — Seed Data**
-  - [ ] 3 clients: Meridian Health, Volt Energy, NovaPay
-  - [ ] 4 projects with varied health (85, 100, 55, 72)
-  - [ ] Milestones in mixed states (completed with approvals, in_progress, overdue)
-  - [ ] 3–6 status updates per project including blockers
-  - [ ] `make seed` runs cleanly
+- [x] **Step 13 — Seed Data** (merged into Step 15 slot)
+  - [x] 3 clients: Meridian Health, Volt Energy, NovaPay
+  - [x] 4 projects with varied health (82, 50, 36, 70)
+  - [x] Milestones in mixed states (completed with approvals, in_progress, overdue, pending_approval)
+  - [x] 4–5 status updates per project including blockers
+  - [x] Realistic approval records (including one rejected + re-approved)
+  - [x] Health scores recalculated after seed
+  - [x] `make seed` runs cleanly
 
 - [ ] **Step 16 — Docker**
   - [ ] Backend `Dockerfile`

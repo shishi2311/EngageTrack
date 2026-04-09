@@ -1,19 +1,26 @@
-import { useState, useEffect } from 'react'
-import { api } from '../api/client'
+import { useState, useEffect, useCallback } from 'react'
 
-export function useApi<T>(path: string) {
+export function useApi<T>(fetchFn: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async () => {
     setLoading(true)
-    api.get<T>(path)
-      .then((res) => { if (!cancelled) { setData(res); setLoading(false) } })
-      .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false) } })
-    return () => { cancelled = true }
-  }, [path])
+    setError(null)
+    try {
+      const result = await fetchFn()
+      setData(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchFn])
 
-  return { data, loading, error }
+  useEffect(() => {
+    load()
+  }, [load])
+
+  return { data, loading, error, refetch: load }
 }
