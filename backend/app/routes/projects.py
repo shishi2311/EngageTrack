@@ -9,6 +9,7 @@ from ..schemas import (
     ProjectUpdateSchema,
     ProjectResponseSchema,
     StatusUpdateResponseSchema,
+    MilestoneResponseSchema,
 )
 from ..errors import NotFoundError
 from ..services import project_service
@@ -21,6 +22,7 @@ _update_schema = ProjectUpdateSchema()
 _response_schema = ProjectResponseSchema()
 _response_many = ProjectResponseSchema(many=True)
 _update_response_many = StatusUpdateResponseSchema(many=True)
+_milestone_response_many = MilestoneResponseSchema(many=True)
 
 # Maps ?health= query param to score ranges
 _HEALTH_RANGES = {
@@ -66,19 +68,11 @@ def get_project(project_id):
     project = db.session.get(Project, project_id)
     if not project:
         raise NotFoundError(f"Project '{project_id}' not found.")
-    # Embed last 10 status updates and milestones in response
+    # Embed full milestones (with valid_transitions + latest_approval) and last 10 updates
     response = _response_schema.dump(project)
-    response["milestones"] = [
-        {
-            "id": m.id,
-            "title": m.title,
-            "status": m.status,
-            "due_date": m.due_date.isoformat() if m.due_date else None,
-            "completed_at": m.completed_at.isoformat() if m.completed_at else None,
-            "sort_order": m.sort_order,
-        }
-        for m in project.milestones.order_by(db.text("sort_order")).all()
-    ]
+    response["milestones"] = _milestone_response_many.dump(
+        project.milestones.order_by(db.text("sort_order")).all()
+    )
     response["recent_status_updates"] = _update_response_many.dump(
         project.status_updates.order_by(db.text("created_at DESC")).limit(10).all()
     )

@@ -5,7 +5,7 @@ import { getProject } from '../api/client'
 import type { Project } from '../types'
 import { HealthRing } from '../components/shared/HealthRing'
 import { ErrorCard } from '../components/shared/ErrorCard'
-import { StatusBadge } from '../components/shared/StatusBadge'
+import { ProjectStatusPicker } from '../components/projects/ProjectStatusPicker'
 import { Skeleton } from '../components/shared/Skeleton'
 import { MilestoneTimeline } from '../components/milestones/MilestoneTimeline'
 import { StatusFeed } from '../components/status/StatusFeed'
@@ -174,7 +174,12 @@ export default function ProjectDetailPage() {
               >
                 {project.name}
               </h1>
-              <StatusBadge status={project.status} />
+              <ProjectStatusPicker
+                projectId={project.id}
+                currentStatus={project.status}
+                onChanged={refetch}
+                addToast={addToast}
+              />
             </div>
             <p style={{ margin: '0 0 8px', fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
               {project.client_name}

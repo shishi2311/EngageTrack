@@ -74,9 +74,10 @@ describe('ProjectCard', () => {
     expect(screen.getByText('1 milestone')).toBeInTheDocument()
   })
 
-  it('renders the StatusBadge for project status', () => {
+  it('renders the status picker showing the friendly status label', () => {
     render(<MemoryRouter><ProjectCard project={buildProject()} /></MemoryRouter>)
-    expect(screen.getByText('In Progress')).toBeInTheDocument()
+    // ProjectStatusPicker renders "Active" for in_progress
+    expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
   it('navigates to project detail page when clicked', () => {
