@@ -1,19 +1,11 @@
-import { useCallback, useState, useMemo } from 'react'
+import { useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
-import { getDashboardSummary, getProjects } from '../api/client'
-import type { DashboardSummary, Project, ProjectStatus, HealthCategory } from '../types'
+import { getDashboardSummary } from '../api/client'
+import type { DashboardSummary, HealthCategory } from '../types'
 import PageHeader from '../components/layout/PageHeader'
 import { Skeleton } from '../components/shared/Skeleton'
-import { EmptyState } from '../components/shared/EmptyState'
-import { ProjectCard } from '../components/shared/ProjectCard'
 import { ErrorCard } from '../components/shared/ErrorCard'
-import { AddProjectForm } from '../components/projects/AddProjectForm'
-import { STATUS_OPTIONS } from '../components/projects/ProjectStatusPicker'
-
-function addToast(msg: string, type: 'success' | 'error') {
-  const fn = (window as unknown as Record<string, unknown>).__addToast
-  if (typeof fn === 'function') fn(msg, type)
-}
 
 // ── Health config ─────────────────────────────────────────────────────────────
 
@@ -24,33 +16,39 @@ const HEALTH_OPTIONS: { value: HealthCategory; label: string; color: string; bg:
   { value: 'failing',  label: 'Failing',  color: 'var(--health-failing)',  bg: 'var(--health-failing-bg)',  range: '0–29'   },
 ]
 
-function scoreToCategory(score: number): HealthCategory {
-  if (score >= 80) return 'healthy'
-  if (score >= 60) return 'at_risk'
-  if (score >= 30) return 'critical'
-  return 'failing'
+const UPDATE_TYPE_CONFIG: Record<string, { color: string; label: string }> = {
+  progress: { color: 'var(--status-progress)', label: 'Progress' },
+  blocker:  { color: 'var(--status-blocker)',  label: 'Blocker'  },
+  risk:     { color: 'var(--status-risk)',     label: 'Risk'     },
+  general:  { color: 'var(--status-general)',  label: 'General'  },
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
-interface StatCardProps {
+function StatCard({ label, value, index, pulse, sublabel, accentColor, onClick }: {
   label: string
   value: number | string
   index: number
   pulse?: boolean
   sublabel?: string
-  active?: boolean
-  onClick?: () => void
   accentColor?: string
-}
-
-function StatCard({ label, value, index, pulse, sublabel, active, onClick, accentColor }: StatCardProps) {
+  onClick?: () => void
+}) {
   return (
     <div
       onClick={onClick}
       style={{
-        background: active ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
-        border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
         padding: 'var(--space-lg)',
         display: 'flex',
@@ -60,34 +58,12 @@ function StatCard({ label, value, index, pulse, sublabel, active, onClick, accen
         animation: 'fadeInUp 0.4s ease forwards',
         opacity: 0,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'border-color var(--transition-base), background var(--transition-base), box-shadow var(--transition-base)',
-        position: 'relative',
-        overflow: 'hidden',
+        transition: 'border-color var(--transition-base), box-shadow var(--transition-base)',
       }}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          e.currentTarget.style.borderColor = active ? 'var(--border-strong)' : 'var(--accent-primary)'
-          e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (onClick) {
-          e.currentTarget.style.borderColor = active ? 'var(--border-strong)' : 'var(--border-subtle)'
-          e.currentTarget.style.boxShadow = 'none'
-        }
-      }}
+      onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' } }}
+      onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.boxShadow = 'none' } }}
     >
-      {active && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-          background: accentColor ?? 'var(--accent-primary)',
-        }} />
-      )}
-      <p style={{
-        margin: 0, fontSize: 'var(--text-xs)', fontWeight: 600,
-        letterSpacing: '0.08em', textTransform: 'uppercase',
-        color: active ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-      }}>
+      <p style={{ margin: 0, fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
         {label}
       </p>
       <p style={{
@@ -114,59 +90,42 @@ function StatCardSkeleton() {
 
 // ── Health distribution bar ───────────────────────────────────────────────────
 
-function HealthDistributionBar({ distribution, total, activeHealth, onSelect }: {
+function HealthDistributionBar({ distribution, total }: {
   distribution: DashboardSummary['health_distribution']
   total: number
-  activeHealth: HealthCategory | null
-  onSelect: (h: HealthCategory | null) => void
 }) {
   if (total === 0) return null
   return (
-    <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
-          Portfolio Health
-        </span>
-        {activeHealth && (
-          <button onClick={() => onSelect(null)} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 500 }}>
-            Clear filter ×
-          </button>
-        )}
-      </div>
-      {/* Stacked bar */}
-      <div style={{ height: 8, borderRadius: 9999, overflow: 'hidden', display: 'flex', gap: 2, marginBottom: 10 }}>
+    <div
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-lg)',
+        marginBottom: 'var(--space-md)',
+      }}
+    >
+      <p style={{ margin: '0 0 12px', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+        Portfolio Health
+      </p>
+      <div style={{ height: 10, borderRadius: 9999, overflow: 'hidden', display: 'flex', gap: 2, marginBottom: 12 }}>
         {HEALTH_OPTIONS.map(({ value, color }) => {
           const count = distribution[value] ?? 0
           const pct = total > 0 ? (count / total) * 100 : 0
           if (pct === 0) return null
-          return (
-            <div key={value} style={{ width: `${pct}%`, background: color, borderRadius: 9999, transition: 'opacity var(--transition-fast)', opacity: activeHealth && activeHealth !== value ? 0.3 : 1 }} />
-          )
+          return <div key={value} style={{ width: `${pct}%`, background: color, borderRadius: 9999 }} />
         })}
       </div>
-      {/* Legend pills */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {HEALTH_OPTIONS.map(({ value, label, color, bg }) => {
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        {HEALTH_OPTIONS.map(({ value, label, color }) => {
           const count = distribution[value] ?? 0
           if (count === 0) return null
-          const isActive = activeHealth === value
           return (
-            <button
-              key={value}
-              onClick={() => onSelect(isActive ? null : value)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '4px 10px', borderRadius: 9999,
-                background: isActive ? bg : 'transparent',
-                border: `1px solid ${isActive ? color : 'var(--border-subtle)'}`,
-                color: isActive ? color : 'var(--text-secondary)',
-                fontSize: 'var(--text-xs)', fontWeight: isActive ? 600 : 400,
-                cursor: 'pointer', transition: 'all var(--transition-fast)',
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              {label} <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.8 }}>{count}</span>
-            </button>
+            <div key={value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{label}</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{count}</span>
+            </div>
           )
         })}
       </div>
@@ -174,52 +133,52 @@ function HealthDistributionBar({ distribution, total, activeHealth, onSelect }: 
   )
 }
 
-// ── Status filter tabs ────────────────────────────────────────────────────────
+// ── Recent activity feed ──────────────────────────────────────────────────────
 
-function StatusTabs({ projects, activeStatus, onSelect }: {
-  projects: Project[]
-  activeStatus: ProjectStatus | 'all'
-  onSelect: (s: ProjectStatus | 'all') => void
-}) {
-  const counts: Record<string, number> = { all: projects.length }
-  for (const p of projects) counts[p.status] = (counts[p.status] ?? 0) + 1
-
-  const tabs: { value: ProjectStatus | 'all'; label: string; color?: string }[] = [
-    { value: 'all', label: 'All' },
-    ...STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, color: o.color })),
-  ]
-
+function RecentActivity({ updates }: { updates: DashboardSummary['recent_updates'] }) {
+  if (updates.length === 0) return null
   return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 'var(--space-md)' }}>
-      {tabs.map(({ value, label, color }) => {
-        const count = counts[value] ?? 0
-        if (value !== 'all' && count === 0) return null
-        const isActive = activeStatus === value
-        return (
-          <button
-            key={value}
-            onClick={() => onSelect(value)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 'var(--radius-md)',
-              background: isActive ? (color ? `${color}1a` : 'var(--accent-primary-subtle)') : 'transparent',
-              border: `1px solid ${isActive ? (color ?? 'var(--accent-primary)') : 'var(--border-subtle)'}`,
-              color: isActive ? (color ?? 'var(--accent-primary)') : 'var(--text-secondary)',
-              fontSize: 'var(--text-xs)', fontWeight: isActive ? 600 : 400,
-              cursor: 'pointer', transition: 'all var(--transition-fast)',
-            }}
-          >
-            {label}
-            <span style={{
-              padding: '1px 6px', borderRadius: 9999,
-              background: isActive ? 'rgba(255,255,255,0.15)' : 'var(--bg-tertiary)',
-              fontFamily: 'var(--font-mono)', fontSize: 10,
-            }}>
-              {count}
-            </span>
-          </button>
-        )
-      })}
+    <div
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-lg)',
+      }}
+    >
+      <p style={{ margin: '0 0 16px', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+        Recent Activity
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {updates.slice(0, 8).map((u) => {
+          const cfg = UPDATE_TYPE_CONFIG[u.update_type] ?? UPDATE_TYPE_CONFIG.general
+          return (
+            <div key={u.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%', background: cfg.color,
+                flexShrink: 0, marginTop: 5,
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: '0 0 2px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {u.content}
+                </p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{
+                    display: 'inline-block', padding: '1px 6px', borderRadius: 4,
+                    background: `${cfg.color}1a`, color: cfg.color,
+                    fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+                  }}>
+                    {cfg.label}
+                  </span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                    {relativeTime(u.created_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -227,74 +186,54 @@ function StatusTabs({ projects, activeStatus, onSelect }: {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [activeStatus, setActiveStatus] = useState<ProjectStatus | 'all'>('all')
-  const [activeHealth, setActiveHealth] = useState<HealthCategory | null>(null)
-  const [addProjectOpen, setAddProjectOpen] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const navigate = useNavigate()
+  const summaryFn = useCallback(() => getDashboardSummary(), [])
+  const { data: summary, loading, error } = useApi<DashboardSummary>(summaryFn)
 
-  const summaryFn = useCallback(() => getDashboardSummary(), [refreshKey])
-  const projectsFn = useCallback(() => getProjects(), [refreshKey])
-
-  const { data: summary, loading: summaryLoading, error: summaryError } = useApi<DashboardSummary>(summaryFn)
-  const { data: allProjects, loading: projectsLoading, error: projectsError } = useApi<Project[]>(projectsFn)
-
-  const refetch = useCallback(() => setRefreshKey((k) => k + 1), [])
-
-  // Client-side filtering — snappy, no extra API calls
-  const filteredProjects = useMemo(() => {
-    if (!allProjects) return []
-    return allProjects.filter((p) => {
-      const statusMatch = activeStatus === 'all' || p.status === activeStatus
-      const healthMatch = !activeHealth || scoreToCategory(p.health_score) === activeHealth
-      return statusMatch && healthMatch
-    })
-  }, [allProjects, activeStatus, activeHealth])
-
-  const activeProjectsCount = allProjects?.filter((p) => p.status === 'in_progress').length ?? 0
+  const totalProjects = summary
+    ? Object.values(summary.health_distribution).reduce((a, b) => a + b, 0)
+    : 0
 
   return (
     <div className="page-enter">
       <PageHeader
         title="Dashboard"
-        subtitle={allProjects ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''} across all clients` : 'Overview of all client engagements'}
+        subtitle="Overview of your client engagement portfolio"
         actions={
           <button
-            onClick={() => setAddProjectOpen(true)}
+            onClick={() => navigate('/projects')}
             style={{
               padding: '9px 18px',
-              background: 'var(--accent-primary)',
-              border: '1px solid transparent',
+              background: 'transparent',
+              border: '1px solid var(--border-default)',
               borderRadius: 'var(--radius-md)',
-              color: '#fff',
+              color: 'var(--text-secondary)',
               fontSize: 'var(--text-sm)',
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: 'pointer',
-              transition: 'background var(--transition-fast), transform var(--transition-fast)',
+              transition: 'border-color var(--transition-fast), color var(--transition-fast)',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-primary-hover)'; e.currentTarget.style.transform = 'scale(1.01)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent-primary)'; e.currentTarget.style.transform = 'scale(1)' }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
-            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
           >
-            + New Project
+            View All Projects →
           </button>
         }
       />
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
-        {summaryLoading ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
+        {loading ? (
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
-        ) : summaryError ? (
-          <div style={{ gridColumn: '1/-1' }}><ErrorCard message={summaryError} /></div>
+        ) : error ? (
+          <div style={{ gridColumn: '1/-1' }}><ErrorCard message={error} /></div>
         ) : summary ? (
           <>
             <StatCard label="Total Clients" value={summary.total_clients} index={0} />
             <StatCard
-              label="Active Projects" value={activeProjectsCount} index={1}
-              active={activeStatus === 'in_progress'}
+              label="Active Projects" value={summary.active_projects} index={1}
               accentColor="#3B82F6"
-              onClick={() => setActiveStatus(s => s === 'in_progress' ? 'all' : 'in_progress')}
+              onClick={() => navigate('/projects')}
             />
             <StatCard label="Avg Health" value={summary.avg_health_score} index={2} sublabel="out of 100" />
             <StatCard
@@ -306,71 +245,26 @@ export default function Dashboard() {
         ) : null}
       </div>
 
-      {/* Health distribution bar */}
-      {summary && allProjects && allProjects.length > 0 && (
-        <HealthDistributionBar
-          distribution={summary.health_distribution}
-          total={allProjects.length}
-          activeHealth={activeHealth}
-          onSelect={setActiveHealth}
-        />
-      )}
-
-      {/* Projects section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-sm)', flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: 'var(--tracking-tight)' }}>
-          Projects
-        </h2>
-        {!projectsLoading && allProjects && allProjects.length > 0 && (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-            Showing {filteredProjects.length} of {allProjects.length}
-          </span>
-        )}
-      </div>
-
-      {/* Status filter tabs */}
-      {!projectsLoading && allProjects && allProjects.length > 0 && (
-        <StatusTabs projects={allProjects} activeStatus={activeStatus} onSelect={setActiveStatus} />
-      )}
-
-      {/* Project grid */}
-      {projectsLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-md)' }}>
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} variant="card" height={180} />)}
-        </div>
-      ) : projectsError ? (
-        <ErrorCard message={projectsError} onRetry={refetch} />
-      ) : filteredProjects.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-md)' }}>
-          {filteredProjects.map((project, i) => (
-            <ProjectCard key={project.id} project={project} index={i} onRefetch={refetch} />
-          ))}
-        </div>
-      ) : allProjects && allProjects.length > 0 ? (
-        // Has projects but filters hide them all
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' }}>
-          <EmptyState
-            title="No projects match this filter"
-            subtitle="Try a different status or clear the health filter."
-            action={{ label: 'Clear filters', onClick: () => { setActiveStatus('all'); setActiveHealth(null) } }}
-          />
-        </div>
-      ) : (
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' }}>
-          <EmptyState
-            title="No projects yet"
-            subtitle="Create your first project to start tracking engagement health."
-            action={{ label: '+ New Project', onClick: () => setAddProjectOpen(true) }}
-          />
+      {/* Two-column lower section */}
+      {summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 'var(--space-md)', alignItems: 'start' }}>
+          <HealthDistributionBar distribution={summary.health_distribution} total={totalProjects} />
+          <RecentActivity updates={summary.recent_updates} />
         </div>
       )}
 
-      <AddProjectForm
-        open={addProjectOpen}
-        onClose={() => setAddProjectOpen(false)}
-        onSuccess={refetch}
-        addToast={addToast}
-      />
+      {loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+          <Skeleton variant="card" height={140} />
+          <Skeleton variant="card" height={200} />
+        </div>
+      )}
+
+      <style>{`
+        @media (max-width: 700px) {
+          .dashboard-lower { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }

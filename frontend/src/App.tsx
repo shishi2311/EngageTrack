@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useRef } from 'react'
 import Dashboard from './pages/Dashboard'
 import ClientsPage from './pages/ClientsPage'
+import ProjectsPage from './pages/ProjectsPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import NotFound from './pages/NotFound'
 import AppShell from './components/layout/AppShell'
@@ -30,7 +31,7 @@ function AnimatedRoutes() {
       <Routes location={location}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<ClientsPage />} />
-        <Route path="/projects" element={<Dashboard />} />
+        <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

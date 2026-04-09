@@ -1,8 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
+import type { Theme } from '../../hooks/useTheme'
 
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  theme: Theme
+  onThemeToggle: () => void
 }
 
 const NAV_ITEMS = [
@@ -44,7 +47,7 @@ const NAV_ITEMS = [
   },
 ]
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, theme, onThemeToggle }: SidebarProps) {
   const location = useLocation()
 
   return (
@@ -179,36 +182,68 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Footer */}
       <div
         style={{
-          padding: collapsed ? '16px 0' : '16px 20px',
+          padding: collapsed ? '16px 0' : '16px 12px',
           borderTop: '1px solid var(--border-subtle)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
+          flexDirection: 'column',
           gap: 8,
         }}
       >
-        {!collapsed && (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-            v1.0.0
-          </span>
-        )}
+        {/* Theme toggle */}
         <button
-          onClick={onToggle}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onThemeToggle}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            width: '100%',
+            padding: collapsed ? '8px' : '8px 10px',
             background: 'none',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-tertiary)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
-            padding: '4px 6px',
-            fontSize: 12,
-            transition: 'color var(--transition-fast), border-color var(--transition-fast)',
-            lineHeight: 1,
+            fontSize: 'var(--text-xs)',
+            fontWeight: 500,
+            transition: 'background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast)',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            fontFamily: 'var(--font-sans)',
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)' }}
         >
-          {collapsed ? '›' : '‹'}
+          <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </span>
+          {!collapsed && (
+            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          )}
         </button>
+
+        {/* Collapse toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between' }}>
+          {!collapsed && (
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>v1.0.0</span>
+          )}
+          <button
+            onClick={onToggle}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-tertiary)',
+              cursor: 'pointer',
+              padding: '4px 6px',
+              fontSize: 12,
+              transition: 'color var(--transition-fast), border-color var(--transition-fast)',
+              lineHeight: 1,
+            }}
+          >
+            {collapsed ? '›' : '‹'}
+          </button>
+        </div>
       </div>
     </aside>
   )

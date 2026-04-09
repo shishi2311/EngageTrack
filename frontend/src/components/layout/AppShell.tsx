@@ -2,6 +2,7 @@ import { type ReactNode, useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import { ToastContainer } from '../shared/Toast'
 import { useToast } from '../../hooks/useToast'
+import { useTheme } from '../../hooks/useTheme'
 
 interface AppShellProps {
   children: ReactNode
@@ -16,6 +17,7 @@ export const ToastContext = (() => {
 export default function AppShell({ children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false)
   const { toasts, addToast, removeToast } = useToast()
+  const { theme, toggle: toggleTheme } = useTheme()
 
   // Collapse sidebar on narrow viewports
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function AppShell({ children }: AppShellProps) {
         position: 'relative',
       }}
     >
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} theme={theme} onThemeToggle={toggleTheme} />
       <main
         style={{
           flex: 1,
