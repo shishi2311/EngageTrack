@@ -42,25 +42,26 @@
   - [x] `project_service.update_project_status()` — blocks completion with open milestones
   - [x] `project_service.recalculate_health()` — logs on score change
 
-- [ ] **Step 5 — Routes (thin, delegate to services)**
+- [x] **Step 5 — Routes (thin, delegate to services)**
   - [x] `GET/POST /api/clients`, `GET/PATCH /api/clients/:id`
-  - [x] `GET/POST /api/projects`, `GET/PATCH /api/projects/:id`
+  - [x] `GET/POST /api/projects` (`?status=`, `?client_id=`, `?health=`), `GET/PATCH /api/projects/:id`
+  - [x] `GET /api/projects/:id` — embeds milestones + last 10 status updates
   - [x] `GET/POST /api/projects/:id/milestones`
-  - [x] `PATCH /api/milestones/:id`
+  - [x] `PATCH /api/milestones/:id` — field edits only, rejects status changes
+  - [x] `POST /api/milestones/:id/transition` — drives state machine
   - [x] `POST /api/milestones/:id/request-approval`
   - [x] `POST /api/milestones/:id/approve`
   - [x] `GET/POST /api/projects/:id/status-updates`
-  - [x] `GET /api/dashboard/summary`
-  - [ ] Manual end-to-end API smoke test (all routes return correct shapes)
+  - [x] `GET /api/dashboard/summary` — includes health_distribution + recent_updates
 
-- [ ] **Step 6 — Backend Tests**
-  - [ ] `conftest.py` — test DB fixture, seed helpers
-  - [ ] `test_clients.py` — CRUD + email validation + 404s
-  - [ ] `test_projects.py` — CRUD + engagement cap + date validation
-  - [ ] `test_milestones.py` — create, state machine transitions
-  - [ ] `test_business_rules.py` — approval workflow, engagement cap, completion block
-  - [ ] `test_health_score.py` — no milestones, all on-time, all overdue, blocker penalty
-  - [ ] All tests pass: `make test`
+- [x] **Step 6 — Backend Tests — 63/63 passing**
+  - [x] `conftest.py` — in-memory DB, `sample_client/project/milestone/project_with_milestones` fixtures
+  - [x] `test_clients.py` — CRUD, email validation, status filter, 404s, project_count
+  - [x] `test_projects.py` — CRUD, date validation, health/status/client_id filters, dashboard shape
+  - [x] `test_milestones.py` — create, sort_order, transitions, approval record, latest_approval in response
+  - [x] `test_business_rules.py` — full approval workflow, rejection, engagement cap (3 variants), completion block, milestone-to-closed-project block
+  - [x] `test_health_score.py` — no milestones, all on-time, overdue deduction, blocker stacking, clamp, recalc on transition/blocker
+  - [x] All tests pass: `make test` → **63 passed in 0.46s**
 
 ---
 
