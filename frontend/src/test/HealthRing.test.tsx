@@ -23,8 +23,6 @@ describe('HealthRing', () => {
     const { container } = render(<HealthRing score={72} showLabel={false} />)
     const svg = container.querySelector('svg')
     expect(svg).toBeInTheDocument()
-    // No numeric text node
-    const divs = container.querySelectorAll('div > div')
     // The inner label div should not exist
     expect(container.querySelectorAll('[style*="position: absolute"]')).toHaveLength(0)
   })

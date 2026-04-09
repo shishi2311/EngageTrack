@@ -6,6 +6,7 @@ import PageHeader from '../components/layout/PageHeader'
 import { Skeleton } from '../components/shared/Skeleton'
 import { EmptyState } from '../components/shared/EmptyState'
 import { ProjectCard } from '../components/shared/ProjectCard'
+import { ErrorCard } from '../components/shared/ErrorCard'
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
@@ -132,9 +133,9 @@ export default function Dashboard() {
         {summaryLoading ? (
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : summaryError ? (
-          <p style={{ color: 'var(--health-failing)', gridColumn: '1/-1', fontSize: 'var(--text-sm)' }}>
-            Failed to load summary: {summaryError}
-          </p>
+          <div style={{ gridColumn: '1/-1' }}>
+            <ErrorCard message={summaryError} />
+          </div>
         ) : summary ? (
           <>
             <StatCard
@@ -190,9 +191,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : projectsError ? (
-          <p style={{ color: 'var(--health-failing)', fontSize: 'var(--text-sm)' }}>
-            Failed to load projects: {projectsError}
-          </p>
+          <ErrorCard message={projectsError} />
         ) : projects && projects.length > 0 ? (
           <div
             style={{

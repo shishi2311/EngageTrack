@@ -5,6 +5,7 @@ import type { Client } from '../types'
 import PageHeader from '../components/layout/PageHeader'
 import { ClientList } from '../components/clients/ClientList'
 import { ClientForm } from '../components/clients/ClientForm'
+import { ErrorCard } from '../components/shared/ErrorCard'
 
 function addToast(msg: string, type: 'success' | 'error') {
   const fn = (window as unknown as Record<string, unknown>).__addToast
@@ -56,9 +57,7 @@ export default function ClientsPage() {
       />
 
       {error ? (
-        <p style={{ color: 'var(--health-failing)', fontSize: 'var(--text-sm)' }}>
-          Failed to load clients: {error}
-        </p>
+        <ErrorCard message={error} onRetry={refetch} />
       ) : (
         <ClientList
           clients={clients ?? []}

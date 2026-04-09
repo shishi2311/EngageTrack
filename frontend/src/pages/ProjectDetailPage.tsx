@@ -4,6 +4,7 @@ import { useApi } from '../hooks/useApi'
 import { getProject } from '../api/client'
 import type { Project } from '../types'
 import { HealthRing } from '../components/shared/HealthRing'
+import { ErrorCard } from '../components/shared/ErrorCard'
 import { StatusBadge } from '../components/shared/StatusBadge'
 import { Skeleton } from '../components/shared/Skeleton'
 import { MilestoneTimeline } from '../components/milestones/MilestoneTimeline'
@@ -107,14 +108,11 @@ export default function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div style={{ padding: 'var(--space-xl)' }}>
-        <Link to="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
-          ← Back to Dashboard
+      <div>
+        <Link to="/" style={{ display: 'inline-block', marginBottom: 'var(--space-lg)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+          ← Back to Projects
         </Link>
-        <div style={{ marginTop: 'var(--space-xl)', textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--text-primary)' }}>Project not found</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>{error}</p>
-        </div>
+        <ErrorCard message={error} onRetry={refetch} />
       </div>
     )
   }
