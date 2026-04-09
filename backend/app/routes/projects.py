@@ -1,14 +1,23 @@
 from flask import Blueprint, jsonify, request
+
 from ..extensions import db
 from ..models.project import Project
 from ..models.client import Client
-from ..schemas.project_schema import ProjectSchema
-from ..errors import NotFoundError, ValidationError
+from ..schemas import (
+    load_or_raise,
+    ProjectCreateSchema,
+    ProjectUpdateSchema,
+    ProjectResponseSchema,
+)
+from ..errors import NotFoundError
 from ..services import project_service
 
 bp = Blueprint("projects", __name__, url_prefix="/api/projects")
-project_schema = ProjectSchema()
-projects_schema = ProjectSchema(many=True)
+
+_create_schema = ProjectCreateSchema()
+_update_schema = ProjectUpdateSchema()
+_response_schema = ProjectResponseSchema()
+_response_many = ProjectResponseSchema(many=True)
 
 
 @bp.get("")
@@ -18,39 +27,41 @@ def list_projects():
         query = query.filter_by(status=status)
     if client_id := request.args.get("client_id"):
         query = query.filter_by(client_id=client_id)
-    return jsonify(projects_schema.dump(query.all()))
+    return jsonify(_response_many.dump(query.all()))
 
 
 @bp.post("")
 def create_project():
-    try:
-        project = project_schema.load(request.get_json())
-    except Exception as e:
-        raise ValidationError(str(e))
-    client = Client.query.get_or_404(project.client_id, description="Client not found")
+    data = load_or_raise(_create_schema, request.get_json())
+    client = db.session.get(Client, data["client_id"])
+    if not client:
+        raise NotFoundError(f"Client '{data['client_id']}' not found.")
     project_service.check_engagement_cap(client)
+    project = Project(**data)
     db.session.add(project)
     db.session.commit()
-    return jsonify(project_schema.dump(project)), 201
+    return jsonify(_response_schema.dump(project)), 201
 
 
 @bp.get("/<project_id>")
 def get_project(project_id):
-    project = Project.query.get_or_404(project_id, description="Project not found")
-    return jsonify(project_schema.dump(project))
+    project = db.session.get(Project, project_id)
+    if not project:
+        raise NotFoundError(f"Project '{project_id}' not found.")
+    return jsonify(_response_schema.dump(project))
 
 
 @bp.patch("/<project_id>")
 def update_project(project_id):
-    project = Project.query.get_or_404(project_id, description="Project not found")
-    data = request.get_json()
-    if data.get("status") == "completed":
-        project_service.complete_project(project)
-    else:
-        try:
-            project_schema.load(data, instance=project, partial=True)
-        except Exception as e:
-            raise ValidationError(str(e))
-    project_service.refresh_health(project)
+    project = db.session.get(Project, project_id)
+    if not project:
+        raise NotFoundError(f"Project '{project_id}' not found.")
+    data = load_or_raise(_update_schema, request.get_json())
+    new_status = data.pop("status", None)
+    for key, value in data.items():
+        setattr(project, key, value)
+    if new_status:
+        project_service.update_project_status(project, new_status)
+    project_service.recalculate_health(project)
     db.session.commit()
-    return jsonify(project_schema.dump(project))
+    return jsonify(_response_schema.dump(project))
