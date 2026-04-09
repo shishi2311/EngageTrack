@@ -96,8 +96,8 @@ Input schemas (`ClientCreateSchema`, `ProjectUpdateSchema`) are plain `marshmall
 **Milestone state machine as single source of truth**
 `VALID_TRANSITIONS` in `milestone_service.py` is the only place transition rules are defined. The frontend reads `valid_transitions` from the API response and shows/hides buttons accordingly — no transition logic is duplicated in the UI.
 
-**Dark editorial design**
-The entire color system is CSS custom properties in `globals.css`. Components use `var(--accent-primary)` etc. — zero hardcoded hex values. This means the design is consistently applied and a single variable change propagates everywhere.
+**Dark/light theme with CSS custom properties**
+The entire color system lives in `globals.css` as CSS custom properties. The default is a dark editorial theme; a `[data-theme="light"]` block overrides every token for light mode. Components use `var(--accent-primary)` etc. — zero hardcoded hex values. Theme preference is persisted to `localStorage` and toggled from the sidebar.
 
 ---
 
@@ -181,12 +181,13 @@ EngageTrack/
 │   │   ├── api/            # Typed API client (endpoint functions)
 │   │   ├── components/
 │   │   │   ├── layout/     # AppShell, Sidebar, PageHeader
-│   │   │   ├── shared/     # HealthRing, StatusBadge, Skeleton, Toast, Modal, EmptyState, ProgressBar, ProjectCard
+│   │   │   ├── shared/     # HealthRing, StatusBadge, Skeleton, Toast, Modal, EmptyState, ProgressBar, ProjectCard, ErrorCard
 │   │   │   ├── milestones/ # MilestoneTimeline, ApprovalDialog
 │   │   │   ├── status/     # StatusFeed (with inline StatusForm)
+│   │   │   ├── projects/   # ProjectStatusPicker, AddProjectForm
 │   │   │   └── clients/    # ClientList, ClientForm
-│   │   ├── hooks/          # useApi (generic fetch hook with refetch)
-│   │   ├── pages/          # Dashboard, ProjectDetailPage, ClientsPage, NotFound
+│   │   ├── hooks/          # useApi (fetch + refetch), useTheme (dark/light toggle)
+│   │   ├── pages/          # Dashboard, ProjectsPage, ProjectDetailPage, ClientsPage, NotFound
 │   │   ├── styles/         # globals.css (CSS design token system)
 │   │   ├── test/           # Vitest test suite (44 tests)
 │   │   └── types/          # TypeScript domain interfaces
