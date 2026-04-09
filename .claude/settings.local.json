@@ -4,7 +4,17 @@
       "Bash(python3 -m venv venv)",
       "Bash(npm create:*)",
       "Bash(npm install:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:5173)",
+      "Bash(kill %1)",
+      "Bash(kill %2)",
+      "Bash(python3:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Bash(curl -s http://localhost:5001/api/dashboard/summary)",
+      "Bash(curl -s http://localhost:5173)"
     ]
   }
 }

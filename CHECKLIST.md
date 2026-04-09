@@ -128,11 +128,12 @@
   - [ ] Button press scale feedback
   - [ ] Responsive: sidebar collapses <1024px, grid 1-col <768px
 
-- [x] **Step 14 — Frontend Tests — 34/34 passing**
+- [x] **Step 14 — Frontend Tests — 44/44 passing**
   - [x] `HealthRing.test.tsx` — correct color per score range, size variants, showLabel toggle
+  - [x] `StatusBadge.test.tsx` — correct label + color per status, dot-only variant, unknown fallback
   - [x] `MilestoneCard.test.tsx` — valid action buttons per state, disabled buttons, overdue, count badge
   - [x] `ApprovalDialog.test.tsx` — requires approver name, approve/reject API calls, error toast
-  - [x] `StatusBadge.test.tsx` — correct label + color per status, dot-only variant, unknown fallback
+  - [x] `ProjectCard.test.tsx` — name/client/progress rendering, navigation, overdue label
   - [x] Vitest + Testing Library configured; `make test-frontend` target added
 
 ---
@@ -148,21 +149,24 @@
   - [x] Health scores recalculated after seed
   - [x] `make seed` runs cleanly
 
-- [ ] **Step 16 — Docker**
-  - [ ] Backend `Dockerfile`
-  - [ ] Frontend `Dockerfile`
-  - [ ] `docker-compose up --build` starts everything
-  - [ ] Migrations run automatically on backend start
-  - [ ] `docker-compose exec backend python seed.py` works
+- [x] **Step 15 — Docker**
+  - [x] `backend/Dockerfile` — python:3.11-slim, installs requirements, runs `flask db upgrade` then `python run.py`
+  - [x] `frontend/Dockerfile` — node:20-slim, `npm ci`, runs Vite dev server on 0.0.0.0
+  - [x] `docker-compose.yml` — postgres healthcheck so backend waits for DB to be ready
+  - [x] `docker-compose exec backend python seed.py` works
 
-- [ ] **Step 17 — README**
-  - [ ] What this is (2 sentences)
-  - [ ] Quick start (`docker-compose up`)
-  - [ ] Technical decisions
-  - [ ] Architecture diagram (Route → Schema → Service → Model → DB)
-  - [ ] Key business rules documented
-  - [ ] Design philosophy section
-  - [ ] AI usage section
+- [x] **Step 16 — README**
+  - [x] 2-sentence description
+  - [x] Quick start (Docker + without Docker)
+  - [x] Tech stack table
+  - [x] Architecture diagram (Route → Schema → Service → Model → DB)
+  - [x] Key technical decisions (service layer, health score storage, schema split, state machine, design system)
+  - [x] Business rules (state machine, engagement cap, health formula)
+  - [x] Tradeoffs & limitations section
+  - [x] What I'd add next
+  - [x] AI usage — honest account of what was generated vs. reviewed/fixed
+  - [x] File structure overview
+  - [x] Testing section
 
 ---
 
