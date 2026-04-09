@@ -29,7 +29,15 @@ def create_app(config=None):
     ma.init_app(app)
     CORS(app)
 
-    # Register blueprints
+    # Structured logging + request middleware (must come before blueprints)
+    from .logging_config import setup_logging
+    setup_logging(app)
+
+    # Consistent JSON error responses
+    from .errors import register_error_handlers
+    register_error_handlers(app)
+
+    # Blueprints
     from .routes import clients, projects, milestones, status_updates, dashboard
     app.register_blueprint(clients.bp)
     app.register_blueprint(projects.bp)
