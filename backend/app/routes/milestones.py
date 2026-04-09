@@ -42,7 +42,7 @@ def create_milestone(project_id):
     data["project_id"] = project_id
     milestone = Milestone(**data)
     db.session.add(milestone)
-    db.session.flush()   # get milestone.id before recalculating
+    db.session.flush()
     project_service.recalculate_health(project)
     db.session.commit()
     return jsonify(_response_schema.dump(milestone)), 201
@@ -50,23 +50,43 @@ def create_milestone(project_id):
 
 @bp.patch("/api/milestones/<milestone_id>")
 def update_milestone(milestone_id):
+    """Update editable fields only (title, description, due_date, sort_order).
+    Status changes must go through /transition."""
     milestone = db.session.get(Milestone, milestone_id)
     if not milestone:
         raise NotFoundError(f"Milestone '{milestone_id}' not found.")
     data = request.get_json() or {}
-    if new_status := data.get("status"):
-        milestone_service.transition_status(milestone, new_status)
-    else:
-        # Allow updating title, description, due_date, sort_order
-        for field in ("title", "description", "due_date", "sort_order"):
-            if field in data:
-                setattr(milestone, field, data[field])
+    # Reject attempts to set status via PATCH — use /transition instead
+    if "status" in data:
+        raise ValidationError(
+            "Use POST /api/milestones/<id>/transition to change milestone status.",
+            {"status": ["Status changes require the /transition endpoint."]},
+        )
+    for field in ("title", "description", "due_date", "sort_order"):
+        if field in data:
+            setattr(milestone, field, data[field])
+    db.session.commit()
+    return jsonify(_response_schema.dump(milestone))
+
+
+@bp.post("/api/milestones/<milestone_id>/transition")
+def transition_milestone(milestone_id):
+    """Drive the milestone state machine. Body: {"status": "<new_status>"}."""
+    milestone = db.session.get(Milestone, milestone_id)
+    if not milestone:
+        raise NotFoundError(f"Milestone '{milestone_id}' not found.")
+    data = request.get_json() or {}
+    new_status = data.get("status")
+    if not new_status:
+        raise ValidationError("status is required.", {"status": ["This field is required."]})
+    milestone_service.transition_status(milestone, new_status)
     db.session.commit()
     return jsonify(_response_schema.dump(milestone))
 
 
 @bp.post("/api/milestones/<milestone_id>/request-approval")
 def request_approval(milestone_id):
+    """Convenience endpoint: transition in_progress → pending_approval."""
     milestone = db.session.get(Milestone, milestone_id)
     if not milestone:
         raise NotFoundError(f"Milestone '{milestone_id}' not found.")
@@ -77,6 +97,7 @@ def request_approval(milestone_id):
 
 @bp.post("/api/milestones/<milestone_id>/approve")
 def approve_milestone(milestone_id):
+    """Submit an approval decision. Body: {approved_by, decision, comments?}."""
     milestone = db.session.get(Milestone, milestone_id)
     if not milestone:
         raise NotFoundError(f"Milestone '{milestone_id}' not found.")
@@ -87,12 +108,13 @@ def approve_milestone(milestone_id):
         )
     data = request.get_json() or {}
     if not data.get("approved_by"):
-        raise ValidationError("approved_by is required.", {"approved_by": ["This field is required."]})
-
+        raise ValidationError(
+            "approved_by is required.",
+            {"approved_by": ["This field is required."]},
+        )
     decision = data.get("decision", "approved")
     new_status = "approved" if decision == "approved" else "in_progress"
 
-    # Persist the approval record first
     approval = Approval(
         milestone_id=milestone.id,
         approved_by=data["approved_by"],
@@ -100,8 +122,6 @@ def approve_milestone(milestone_id):
         comments=data.get("comments"),
     )
     db.session.add(approval)
-
-    # Then drive the state machine (also recalcs health)
     milestone_service.transition_status(
         milestone,
         new_status,

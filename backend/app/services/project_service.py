@@ -82,7 +82,7 @@ def update_project_status(project, new_status: str) -> None:
         "project_status_change",
         extra={
             "project_id": project.id,
-            "name": project.name,
+            "project_name": project.name,   # "name" is reserved by LogRecord
             "old_status": old_status,
             "new_status": new_status,
         },

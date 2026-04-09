@@ -8,9 +8,11 @@ from ..schemas import (
     ProjectCreateSchema,
     ProjectUpdateSchema,
     ProjectResponseSchema,
+    StatusUpdateResponseSchema,
 )
 from ..errors import NotFoundError
 from ..services import project_service
+from ..services.health_calculator import get_health_breakdown
 
 bp = Blueprint("projects", __name__, url_prefix="/api/projects")
 
@@ -18,6 +20,15 @@ _create_schema = ProjectCreateSchema()
 _update_schema = ProjectUpdateSchema()
 _response_schema = ProjectResponseSchema()
 _response_many = ProjectResponseSchema(many=True)
+_update_response_many = StatusUpdateResponseSchema(many=True)
+
+# Maps ?health= query param to score ranges
+_HEALTH_RANGES = {
+    "healthy":  (80, 100),
+    "at_risk":  (60, 79),
+    "critical": (30, 59),
+    "failing":  (0,  29),
+}
 
 
 @bp.get("")
@@ -27,6 +38,13 @@ def list_projects():
         query = query.filter_by(status=status)
     if client_id := request.args.get("client_id"):
         query = query.filter_by(client_id=client_id)
+    if health := request.args.get("health"):
+        bounds = _HEALTH_RANGES.get(health)
+        if bounds:
+            query = query.filter(
+                Project.health_score >= bounds[0],
+                Project.health_score <= bounds[1],
+            )
     return jsonify(_response_many.dump(query.all()))
 
 
@@ -48,7 +66,23 @@ def get_project(project_id):
     project = db.session.get(Project, project_id)
     if not project:
         raise NotFoundError(f"Project '{project_id}' not found.")
-    return jsonify(_response_schema.dump(project))
+    # Embed last 10 status updates and milestones in response
+    response = _response_schema.dump(project)
+    response["milestones"] = [
+        {
+            "id": m.id,
+            "title": m.title,
+            "status": m.status,
+            "due_date": m.due_date.isoformat() if m.due_date else None,
+            "completed_at": m.completed_at.isoformat() if m.completed_at else None,
+            "sort_order": m.sort_order,
+        }
+        for m in project.milestones.order_by(db.text("sort_order")).all()
+    ]
+    response["recent_status_updates"] = _update_response_many.dump(
+        project.status_updates.order_by(db.text("created_at DESC")).limit(10).all()
+    )
+    return jsonify(response)
 
 
 @bp.patch("/<project_id>")

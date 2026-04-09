@@ -53,9 +53,9 @@ def register_error_handlers(app):
             "app_error",
             extra={
                 "error_code": err.code,
-                "message": err.message,
+                "error_message": err.message,   # "message" is reserved by LogRecord
                 "details": err.details,
-                "status": err.status_code,
+                "http_status": err.status_code,
             },
         )
         return _error_response(err.code, err.message, err.details, err.status_code)
