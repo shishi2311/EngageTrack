@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: engagetrack
+      POSTGRES_USER: engagetrack
+      POSTGRES_PASSWORD: engagetrack
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://engagetrack:engagetrack@postgres:5432/engagetrack
+      SECRET_KEY: production-secret-change-this
+      FLASK_ENV: production
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "flask db upgrade && python run.py"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5000
+    ports:
+      - "5173:5173"
+
+volumes:
+  postgres_data:

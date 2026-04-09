@@ -1,0 +1,31 @@
+# Python
+backend/venv/
+backend/instance/
+backend/*.db
+backend/.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Migrations
+backend/migrations/versions/__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
